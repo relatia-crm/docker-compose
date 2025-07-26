@@ -1,45 +1,60 @@
 services:
+  rabbit:
+    image: "rabbitmq:3-management"
+    hostname: "rabbitmq"
+    container_name: "rabbitmq"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    extends:
+      file: common-config.yaml
+      service: network-deploy-service
+
   config-server:
     image: "gokultmail/config-server:latest"
     container_name: "config-server"
     ports:
       - "8071:8071"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - relatia
+    depends_on:
+      rabbit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8071/actuator/health/readiness", "|", "grep", "UP", "||", "exit", "1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    extends:
+      file: common-config.yaml
+      service: microservice-base-config
+
   customer-service:
     image: "gokultmail/customer-service:latest"
     container_name: "customer-service"
     ports:
       - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8071
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - relatia
+    extends:
+      file: common-config.yaml
+      service: microservice-config-server-config
+
   notification-service:
     image: "gokultmail/notification-service:latest"
     container_name: "notification-service"
     ports:
       - "9000:9000"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8071
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - relatia
+    extends:
+      file: common-config.yaml
+      service: microservice-config-server-config
+
 networks:
   relatia:
     driver: bridge
