@@ -1,23 +1,30 @@
 services:
   rabbit:
-    image: "rabbitmq:3-management"
-    hostname: "rabbitmq"
-    container_name: "rabbitmq"
-    ports:
-      - "15672:15672"
-      - "5672:5672"
-    healthcheck:
-      test: rabbitmq-diagnostics check_port_connectivity
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
     extends:
       file: common-config.yaml
       service: network-deploy-service
+    image: rabbitmq:3.13-management
+    hostname: rabbitmq
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=secret_cookie
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - relatia
 
   config-server:
     image: "gokultmail/config-server:latest"
@@ -28,7 +35,7 @@ services:
       rabbit:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8071/actuator/health/readiness", "|", "grep", "UP", "||", "exit", "1"]
+      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"
       interval: 10s
       timeout: 5s
       retries: 10
@@ -38,23 +45,27 @@ services:
       service: microservice-base-config
 
   customer-service:
+    extends:
+      file: common-config.yaml
+      service: microservice-config-server-config
     image: "gokultmail/customer-service:latest"
     container_name: "customer-service"
     ports:
       - "8080:8080"
+
+  notification-service:
     extends:
       file: common-config.yaml
       service: microservice-config-server-config
-
-  notification-service:
     image: "gokultmail/notification-service:latest"
     container_name: "notification-service"
     ports:
       - "9000:9000"
-    extends:
-      file: common-config.yaml
-      service: microservice-config-server-config
 
 networks:
   relatia:
     driver: bridge
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_logs:
