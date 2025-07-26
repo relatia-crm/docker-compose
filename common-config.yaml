@@ -12,6 +12,7 @@ services:
           memory: 700m
     environment:
       - SPRING_RABBITMQ_HOST=rabbit
+      - SPRING_PROFILES_ACTIVE=prod
 
   microservice-config-server-config:
     extends:
