@@ -42,6 +42,26 @@ services:
       file: common-config.yaml
       service: microservice-base-config
 
+  eureka-server:
+    image: "gokultmail/eureka-server:latest"
+    container_name: "eureka-server"
+    ports:
+      - "8070:8070"
+    depends_on:
+      rabbit:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    extends:
+      file: common-config.yaml
+      service: microservice-config-server-config
+
   customerdb:
     container_name: customerdb
     environment:
@@ -53,7 +73,7 @@ services:
   customer-service:
     extends:
       file: common-config.yaml
-      service: microservice-config-server-config
+      service: microservice-eureka-config
     image: "gokultmail/customer-service:latest"
     container_name: "customer-service"
     ports:
@@ -63,17 +83,41 @@ services:
     depends_on:
       customerdb:
         condition: service_healthy
-      config-server:
+    healthcheck:
+      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  gateway-server:
+    extends:
+      file: common-config.yaml
+      service: microservice-eureka-config
+    image: "gokultmail/gateway-server:latest"
+    container_name: "gateway-server"
+    ports:
+      - "8072:8072"
+    depends_on:
+      customer-service:
+        condition: service_healthy
+      notification-service:
         condition: service_healthy
 
   notification-service:
     extends:
       file: common-config.yaml
-      service: microservice-config-server-config
+      service: microservice-eureka-config
     image: "gokultmail/notification-service:latest"
     container_name: "notification-service"
     ports:
       - "9000:9000"
+    healthcheck:
+      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 networks:
   relatia:

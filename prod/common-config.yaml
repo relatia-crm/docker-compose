@@ -25,6 +25,15 @@ services:
       config-server:
         condition: service_healthy
 
+  microservice-eureka-config:
+    extends:
+      service: microservice-config-server-config
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8070/eureka
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
   microservice-db-config:
     extends:
       service: network-deploy-service
