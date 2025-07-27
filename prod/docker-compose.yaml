@@ -42,6 +42,14 @@ services:
       file: common-config.yaml
       service: microservice-base-config
 
+  customerdb:
+    container_name: customerdb
+    environment:
+      MYSQL_DATABASE: customerdb
+    extends:
+      file: common-config.yaml
+      service: microservice-db-config
+
   customer-service:
     extends:
       file: common-config.yaml
@@ -50,6 +58,13 @@ services:
     container_name: "customer-service"
     ports:
       - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://customerdb:3306/customerdb"
+    depends_on:
+      customerdb:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   notification-service:
     extends:

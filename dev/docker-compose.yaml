@@ -1,0 +1,43 @@
+services:
+  rabbit:
+    extends:
+      file: common-config.yaml
+      service: network-deploy-service
+    image: rabbitmq:3.13-management
+    hostname: rabbitmq
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=secret_cookie
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  customerdb:
+    container_name: customerdb
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: customerdb
+    extends:
+      file: common-config.yaml
+      service: microservice-db-config
+
+networks:
+  relatia:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_logs:

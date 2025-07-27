@@ -1,0 +1,17 @@
+services:
+  network-deploy-service:
+    networks:
+      - relatia
+
+  microservice-db-config:
+    extends:
+      service: network-deploy-service
+    image: mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      timeout: 10s
+      retries: 10
+      interval: 10s
+      start_period: 10s
+    environment:
+      MYSQL_ROOT_PASSWORD: root
